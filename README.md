@@ -8,6 +8,8 @@ Custom nodes for loading and previewing media from URLs in ComfyUI.
 - **Preview Audio**: Play downloaded audio in the ComfyUI interface
 - **Load Video From URL**: Download and extract frames from videos on the internet
 - **Preview Video**: Play extracted video frames in the ComfyUI interface
+- **Save Audio**: Save audio data to file in various formats
+- **Save Video**: Save video frames to file with optional audio
 
 ## Installation
 
@@ -75,6 +77,35 @@ This node creates a video player in the UI to preview extracted frames.
 - `fps`: Playback frame rate
 - `video_info`: Video metadata
 
+### Save Audio
+
+This node saves audio data to a file in various formats.
+
+**Inputs:**
+- `audio`: Audio data to save
+- `filename_prefix`: Base name for the output file
+- `format`: Output format (mp3, wav, flac, ogg)
+- `sample_rate`: Output sample rate
+- `normalize`: Whether to normalize audio levels
+
+### Save Video
+
+This node saves video frames to a file with optional audio.
+
+**Inputs:**
+- `frames`: Video frames to save
+- `fps`: Frame rate for the output video
+- `filename_prefix`: Base name for the output file
+- `format`: Output format (mp4, webm, avi, mov, gif)
+- `codec`: Video codec to use
+- `quality`: Video quality (1-100)
+- `audio` (optional): Audio to include in the video
+- `loop_count` (optional): Number of times to loop the video
+- `pingpong` (optional): Whether to play the video forward then backward
+
+**Outputs:**
+- `video_path`: Path to the saved video file
+
 ## Example Workflows
 
 ### Audio Loading and Preview
@@ -89,6 +120,21 @@ This node creates a video player in the UI to preview extracted frames.
 3. Configure the frame rate, size, and other options as needed
 4. Connect the "FRAMES" output to a "Preview Video" node
 5. Execute the workflow to download the video and preview the frames
+
+### Save Audio From URL
+1. Add a "Load Audio From URL" node
+2. Enter the URL of an audio file
+3. Connect the output to a "Save Audio" node
+4. Configure the output format and options
+5. Execute the workflow to download and save the audio
+
+### Save Video From URL with Audio
+1. Add a "Load Video From URL" node
+2. Enter the URL of a video file
+3. Connect the "FRAMES" output to a "Save Video" node
+4. Connect the "audio" output to the "audio" input of the "Save Video" node
+5. Configure the output format, codec, and other options
+6. Execute the workflow to download and save the video with its audio
 
 ## License
 
