@@ -719,17 +719,13 @@ class SaveVideo:
                 try:
                     if DEBUG:
                         print("Applying pingpong effect")
-                    # Add reversed frames (excluding the first and last frame to avoid duplicates)
                     reversed_frames = frames_np[::-1]
-                    # Skip first and last frame to avoid duplicates
                     if len(reversed_frames) > 2:
                         frames_np = np.concatenate([frames_np, reversed_frames[1:-1]])
                         if DEBUG:
                             print(f"After pingpong: {len(frames_np)} frames")
                 except Exception as e:
                     print(f"[ERROR] Failed to apply pingpong effect: {str(e)}")
-                    # Continue without pingpong rather than failing
-            
             # Apply looping if requested
             if loop_count > 0:
                 try:
@@ -740,68 +736,205 @@ class SaveVideo:
                         print(f"After looping: {len(frames_np)} frames")
                 except Exception as e:
                     print(f"[ERROR] Failed to apply loop effect: {str(e)}")
-                    # Continue without looping rather than failing
-            
+
+            # --- CUSTOM MP4 LOGIC ---
+            if format == "mp4":
+                if DEBUG:
+                    print("[MP4 MODE] Creating GIF first, then converting to MP4 via ffmpeg.")
+                # Step 1: Save as GIF
+                try:
+                    import imageio
+                    gif_output_file = f"{filename}_{counter:05}.gif"
+                    gif_output_path = os.path.join(full_output_folder, gif_output_file)
+                    imageio_frames = [frame for frame in frames_np]
+                    imageio.mimsave(gif_output_path, imageio_frames, fps=fps, loop=0)
+                    if DEBUG:
+                        print(f"[MP4 MODE] Successfully saved GIF: {gif_output_path} ({os.path.getsize(gif_output_path)} bytes)")
+                except ImportError:
+                    try:
+                        from PIL import Image
+                        gif_output_file = f"{filename}_{counter:05}.gif"
+                        gif_output_path = os.path.join(full_output_folder, gif_output_file)
+                        pil_frames = [Image.fromarray(frame) for frame in frames_np]
+                        duration = int(1000 / fps)
+                        if len(pil_frames) > 0:
+                            pil_frames[0].save(
+                                gif_output_path,
+                                format='GIF',
+                                append_images=pil_frames[1:],
+                                save_all=True,
+                                duration=duration,
+                                loop=0,
+                                optimize=False
+                            )
+                            if DEBUG:
+                                print(f"[MP4 MODE] Successfully saved GIF with PIL: {gif_output_path} ({os.path.getsize(gif_output_path)} bytes)")
+                        else:
+                            raise ValueError("No frames to save")
+                    except ImportError:
+                        print("[ERROR] Neither imageio nor PIL is available. Please install one of them with: pip install imageio")
+                        return {"ui": {"video": []}}
+                    except Exception as e:
+                        print(f"[ERROR] Failed to create GIF with PIL: {str(e)}")
+                        return {"ui": {"video": []}}
+                except Exception as e:
+                    print(f"[ERROR] Failed to create GIF: {str(e)}")
+                    return {"ui": {"video": []}}
+                # Step 2: Convert GIF to MP4 using ffmpeg
+                mp4_output_file = f"{filename}_{counter:05}.mp4"
+                mp4_output_path = os.path.join(full_output_folder, mp4_output_file)
+                try:
+                    import subprocess
+                    # Check ffmpeg availability
+                    test_cmd = ["ffmpeg", "-version"]
+                    test_result = subprocess.run(test_cmd, capture_output=True)
+                    if test_result.returncode != 0:
+                        print("[ERROR] ffmpeg not found in PATH, cannot convert GIF to MP4.")
+                        return {"ui": {"video": []}}
+                    # Build ffmpeg command
+                    cmd = [
+                        "ffmpeg",
+                        "-y",
+                        "-i", gif_output_path,
+                        "-vf", f"fps={fps}",
+                        "-c:v", "libx264",
+                        "-preset", "medium",
+                        "-crf", "23",
+                        "-pix_fmt", "yuv420p",
+                        mp4_output_path
+                    ]
+                    if DEBUG:
+                        print(f"[MP4 MODE] Running ffmpeg command: {' '.join(cmd)}")
+                    result = subprocess.run(cmd, capture_output=True)
+                    if result.returncode != 0:
+                        stderr = result.stderr.decode() if hasattr(result.stderr, 'decode') else str(result.stderr)
+                        print(f"[ERROR] ffmpeg failed to convert GIF to MP4: {stderr}")
+                        print(f"[INFO] GIF file is available at: {gif_output_path}")
+                        return {"ui": {"video": []}}
+                    if DEBUG:
+                        print(f"[MP4 MODE] Successfully converted GIF to MP4: {mp4_output_path} ({os.path.getsize(mp4_output_path)} bytes)")
+                except Exception as e:
+                    print(f"[ERROR] Exception during GIF to MP4 conversion: {str(e)}")
+                    print(f"[INFO] GIF file is available at: {gif_output_path}")
+                    return {"ui": {"video": []}}
+                # Step 3: Add audio if provided
+                if audio is not None:
+                    try:
+                        temp_audio = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                        temp_audio_path = temp_audio.name
+                        temp_audio.close()
+                        torchaudio.save(temp_audio_path, audio["waveform"][0], audio["sample_rate"])
+                        temp_output = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+                        temp_output_path = temp_output.name
+                        temp_output.close()
+                        cmd = [
+                            "ffmpeg",
+                            "-y",
+                            "-i", mp4_output_path,
+                            "-i", temp_audio_path,
+                            "-c:v", "copy",
+                            "-c:a", "aac",
+                            "-shortest",
+                            temp_output_path
+                        ]
+                        if DEBUG:
+                            print(f"[MP4 MODE] Adding audio with ffmpeg: {' '.join(cmd)}")
+                        result = subprocess.run(cmd, capture_output=True)
+                        if result.returncode == 0:
+                            import shutil
+                            shutil.move(temp_output_path, mp4_output_path)
+                            if DEBUG:
+                                print(f"[MP4 MODE] Successfully added audio to MP4: {mp4_output_path}")
+                        else:
+                            stderr = result.stderr.decode() if hasattr(result.stderr, 'decode') else str(result.stderr)
+                            print(f"[ERROR] ffmpeg failed to add audio: {stderr}")
+                        try:
+                            os.unlink(temp_audio_path)
+                        except Exception as e:
+                            print(f"[WARNING] Failed to clean up temporary audio file: {str(e)}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to add audio to MP4: {str(e)}")
+                # Step 4: Return mp4 file info
+                filename_only = os.path.basename(mp4_output_path)
+                file_ext = os.path.splitext(filename_only)[1].lower()
+                format_type = 'video/h264-mp4'
+                workflow_name = f"{filename_only.split('.')[0]}.png"
+                video_info = {
+                    "filename": filename_only,
+                    "subfolder": subfolder,
+                    "type": "output",
+                    "format": format_type,
+                    "frame_rate": float(fps),
+                    "workflow": workflow_name,
+                    "fullpath": mp4_output_path
+                }
+                print(f"Saved video as {mp4_output_path}")
+                return {
+                    "ui": {"video": [video_info]},
+                    "gifs": [video_info]
+                }
+            # --- END CUSTOM MP4 LOGIC ---
+
             # Save as GIF directly or if requested
             if format == "gif":
                 if DEBUG:
                     print("Saving as GIF format")
-                try:
                     try:
-                        import imageio
-                        if DEBUG:
-                            print("Using imageio for GIF creation")
-                        
-                        # Convert frames for imageio (RGB order)
-                        imageio_frames = [frame for frame in frames_np]
-                        
-                        # Save as GIF
-                        imageio.mimsave(output_path, imageio_frames, fps=fps, loop=0)
-                        if DEBUG:
-                            print(f"Successfully saved GIF with imageio: {output_path} ({os.path.getsize(output_path)} bytes)")
-                        
-                    except ImportError:
-                        print("WARNING: imageio is required for GIF output. Falling back to PIL if available.")
-                        # Try PIL as fallback
                         try:
-                            from PIL import Image
+                            import imageio
                             if DEBUG:
-                                print("Using PIL for GIF creation")
-                                
-                            # Convert frames to PIL Images
-                            pil_frames = []
-                            for frame in frames_np:
-                                pil_frame = Image.fromarray(frame)
-                                pil_frames.append(pil_frame)
+                                print("Using imageio for GIF creation")
                             
-                            # Calculate duration (in milliseconds)
-                            duration = int(1000 / fps)
+                            # Convert frames for imageio (RGB order)
+                            imageio_frames = [frame for frame in frames_np]
                             
                             # Save as GIF
-                            if len(pil_frames) > 0:
-                                pil_frames[0].save(
-                                    output_path,
-                                    format='GIF',
-                                    append_images=pil_frames[1:],
-                                    save_all=True,
-                                    duration=duration,
-                                    loop=0,  # 0 means loop forever
-                                    optimize=False
-                                )
-                                if DEBUG:
-                                    print(f"Successfully saved GIF with PIL: {output_path} ({os.path.getsize(output_path)} bytes)")
-                            else:
-                                raise ValueError("No frames to save")
+                            imageio.mimsave(output_path, imageio_frames, fps=fps, loop=0)
+                            if DEBUG:
+                                print(f"Successfully saved GIF with imageio: {output_path} ({os.path.getsize(output_path)} bytes)")
+                            
                         except ImportError:
-                            print("[ERROR] Neither imageio nor PIL is available. Please install one of them with: pip install imageio")
-                            raise
-                        except Exception as e:
-                            print(f"[ERROR] Failed to create GIF with PIL: {str(e)}")
-                            raise
-                except Exception as e:
-                    print(f"[ERROR] Failed to create GIF: {str(e)}")
-                    return {"ui": {"video": []}}
-            
+                            print("WARNING: imageio is required for GIF output. Falling back to PIL if available.")
+                            # Try PIL as fallback
+                            try:
+                                from PIL import Image
+                                if DEBUG:
+                                    print("Using PIL for GIF creation")
+                                    
+                                # Convert frames to PIL Images
+                                pil_frames = []
+                                for frame in frames_np:
+                                    pil_frame = Image.fromarray(frame)
+                                    pil_frames.append(pil_frame)
+                                
+                                # Calculate duration (in milliseconds)
+                                duration = int(1000 / fps)
+                                
+                                # Save as GIF
+                                if len(pil_frames) > 0:
+                                    pil_frames[0].save(
+                                        output_path,
+                                        format='GIF',
+                                        append_images=pil_frames[1:],
+                                        save_all=True,
+                                        duration=duration,
+                                        loop=0,  # 0 means loop forever
+                                        optimize=False
+                                    )
+                                    if DEBUG:
+                                        print(f"Successfully saved GIF with PIL: {output_path} ({os.path.getsize(output_path)} bytes)")
+                                else:
+                                    raise ValueError("No frames to save")
+                            except ImportError:
+                                print("[ERROR] Neither imageio nor PIL is available. Please install one of them with: pip install imageio")
+                                raise
+                            except Exception as e:
+                                print(f"[ERROR] Failed to create GIF with PIL: {str(e)}")
+                                raise
+                    except Exception as e:
+                        print(f"[ERROR] Failed to create GIF: {str(e)}")
+                        return {"ui": {"video": []}}
+
             # Save as video
             else:
                 if DEBUG:
