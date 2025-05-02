@@ -688,6 +688,20 @@ class SaveVideo:
                 full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
                 if DEBUG:
                     print(f"Output directory: {full_output_folder}")
+                    
+                # Check for our custom counter file for MP4 files
+                counter_info_file = os.path.join(full_output_folder, f".{filename}_counter.txt")
+                if os.path.exists(counter_info_file):
+                    try:
+                        with open(counter_info_file, 'r') as f:
+                            stored_counter = int(f.read().strip())
+                            if stored_counter > counter:
+                                if DEBUG:
+                                    print(f"Found stored counter {stored_counter}, which is higher than the current counter {counter}")
+                                counter = stored_counter
+                    except Exception as e:
+                        if DEBUG:
+                            print(f"Warning: Failed to read counter info file: {str(e)}")
             except Exception as e:
                 print(f"[ERROR] Failed to create or access output directory: {str(e)}")
                 raise
@@ -869,6 +883,39 @@ class SaveVideo:
                     "fullpath": mp4_output_path
                 }
                 print(f"Saved video as {mp4_output_path}")
+                
+                # Update counter info file for this filename pattern
+                try:
+                    # Update our counter tracking for this filename pattern
+                    highest_counter = counter
+                    pattern_prefix = f"{filename}_"
+                    if os.path.exists(full_output_folder):
+                        for existing_file in os.listdir(full_output_folder):
+                            if existing_file.startswith(pattern_prefix):
+                                try:
+                                    # Extract counter from filename (pattern: name_00001.ext)
+                                    file_counter_str = existing_file[len(pattern_prefix):].split('.')[0]
+                                    if file_counter_str.isdigit():
+                                        file_counter = int(file_counter_str)
+                                        highest_counter = max(highest_counter, file_counter)
+                                except:
+                                    pass
+                    
+                    # Create a flag file that other SaveVideo instances can read to know the latest counter
+                    # This is a simple way to share counter information between different runs
+                    counter_info_file = os.path.join(full_output_folder, f".{filename}_counter.txt")
+                    try:
+                        with open(counter_info_file, 'w') as f:
+                            f.write(str(highest_counter + 1))  # Write next counter value
+                        if DEBUG:
+                            print(f"Updated counter info file to {highest_counter + 1}")
+                    except Exception as e:
+                        if DEBUG:
+                            print(f"Warning: Failed to write counter info file: {str(e)}")
+                except Exception as e:
+                    if DEBUG:
+                        print(f"Warning: Failed to update counter: {str(e)}")
+                
                 return {
                     "ui": {"video": [video_info]},
                     "gifs": [video_info]
@@ -1314,6 +1361,38 @@ class SaveVideo:
             
             # Log success
             print(f"Saved video as {output_path}")
+            
+            # Update counter info file for this filename pattern
+            try:
+                # Update our counter tracking for this filename pattern
+                highest_counter = counter
+                pattern_prefix = f"{filename}_"
+                if os.path.exists(full_output_folder):
+                    for existing_file in os.listdir(full_output_folder):
+                        if existing_file.startswith(pattern_prefix):
+                            try:
+                                # Extract counter from filename (pattern: name_00001.ext)
+                                file_counter_str = existing_file[len(pattern_prefix):].split('.')[0]
+                                if file_counter_str.isdigit():
+                                    file_counter = int(file_counter_str)
+                                    highest_counter = max(highest_counter, file_counter)
+                            except:
+                                pass
+                
+                # Create a flag file that other SaveVideo instances can read to know the latest counter
+                # This is a simple way to share counter information between different runs
+                counter_info_file = os.path.join(full_output_folder, f".{filename}_counter.txt")
+                try:
+                    with open(counter_info_file, 'w') as f:
+                        f.write(str(highest_counter + 1))  # Write next counter value
+                    if DEBUG:
+                        print(f"Updated counter info file to {highest_counter + 1}")
+                except Exception as e:
+                    if DEBUG:
+                        print(f"Warning: Failed to write counter info file: {str(e)}")
+            except Exception as e:
+                if DEBUG:
+                    print(f"Warning: Failed to update counter: {str(e)}")
             
             # Create results with enhanced metadata for history output
             filename_only = os.path.basename(output_path)
