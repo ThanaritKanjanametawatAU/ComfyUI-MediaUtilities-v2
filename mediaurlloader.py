@@ -156,7 +156,7 @@ def create_preview_video(frames_np, fps, temp_dir, prefix="video_preview"):
 
     return success, filename, filepath
 
-class AudioURLLoader:
+class MediaUtilities_AudioURLLoader:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -166,10 +166,10 @@ class AudioURLLoader:
         }
 
     RETURN_TYPES = ("AUDIO",)
-    FUNCTION = "load_audio"
-    CATEGORY = "MediaURLLoader"
+    FUNCTION = "media_utilities_load_audio"
+    CATEGORY = "MediaUtilities"
 
-    def load_audio(self, url):
+    def media_utilities_load_audio(self, url):
         try:
             # Check if URL is valid
             parsed_url = urlparse(url)
@@ -207,7 +207,7 @@ class AudioURLLoader:
             sample_rate = 44100
             return ({"waveform": waveform, "sample_rate": sample_rate},)
 
-class AudioPreview:
+class MediaUtilities_AudioPreview:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -218,11 +218,11 @@ class AudioPreview:
         }
 
     RETURN_TYPES = ()
-    FUNCTION = "preview_audio"
+    FUNCTION = "media_utilities_preview_audio"
     OUTPUT_NODE = True
-    CATEGORY = "MediaURLLoader"
+    CATEGORY = "MediaUtilities"
 
-    def preview_audio(self, audio, prompt=None, extra_pnginfo=None):
+    def media_utilities_preview_audio(self, audio, prompt=None, extra_pnginfo=None):
         try:
             # Get temporary directory for audio preview
             temp_dir = folder_paths.get_temp_directory()
@@ -244,7 +244,7 @@ class AudioPreview:
             print(f"Error previewing audio: {str(e)}")
             return {"ui": {"audio": []}}
 
-class VideoURLLoader:
+class MediaUtilities_VideoURLLoader:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -262,10 +262,10 @@ class VideoURLLoader:
 
     RETURN_TYPES = ("IMAGE", "INT", "AUDIO", "VHS_VIDEOINFO")
     RETURN_NAMES = ("FRAMES", "frame_count", "audio", "video_info")
-    FUNCTION = "load_video"
-    CATEGORY = "MediaURLLoader"
+    FUNCTION = "media_utilities_load_video"
+    CATEGORY = "MediaUtilities"
 
-    def load_video(self, url, force_rate, force_size, custom_width, custom_height,
+    def media_utilities_load_video(self, url, force_rate, force_size, custom_width, custom_height,
                    frame_load_cap, skip_first_frames, select_every_nth):
         try:
             # Check if URL is valid
@@ -451,7 +451,7 @@ class VideoURLLoader:
             }
             return (empty_frame, 1, empty_audio, empty_info)
 
-class VideoPreview:
+class MediaUtilities_VideoPreview:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -464,11 +464,11 @@ class VideoPreview:
         }
 
     RETURN_TYPES = ()
-    FUNCTION = "preview_video"
+    FUNCTION = "media_utilities_preview_video"
     OUTPUT_NODE = True
-    CATEGORY = "MediaURLLoader"
+    CATEGORY = "MediaUtilities"
 
-    def preview_video(self, frames, fps, video_info, prompt=None, extra_pnginfo=None):
+    def media_utilities_preview_video(self, frames, fps, video_info, prompt=None, extra_pnginfo=None):
         try:
             # Get temporary directory for video preview
             temp_dir = folder_paths.get_temp_directory()
@@ -530,7 +530,7 @@ class VideoPreview:
                 print(f"Error previewing video: {str(e)}")
             return {"ui": {"video": []}}
 
-class SaveAudio:
+class MediaUtilities_SaveAudio:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
 
@@ -548,11 +548,11 @@ class SaveAudio:
         }
 
     RETURN_TYPES = ()
-    FUNCTION = "save_audio"
+    FUNCTION = "media_utilities_save_audio"
     OUTPUT_NODE = True
-    CATEGORY = "MediaURLLoader"
+    CATEGORY = "MediaUtilities"
 
-    def save_audio(self, audio, filename_prefix, format, sample_rate, normalize, prompt=None, extra_pnginfo=None):
+    def media_utilities_save_audio(self, audio, filename_prefix, format, sample_rate, normalize, prompt=None, extra_pnginfo=None):
         try:
             # Create output directory if it doesn't exist
             full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
@@ -626,7 +626,7 @@ class SaveAudio:
             print(f"Error saving audio: {str(e)}")
             return {"ui": {"audio": []}}
 
-class SaveVideo:
+class MediaUtilities_SaveVideo:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
 
@@ -651,11 +651,11 @@ class SaveVideo:
         }
 
     RETURN_TYPES = ()
-    FUNCTION = "save_video"
+    FUNCTION = "media_utilities_save_video"
     OUTPUT_NODE = True
-    CATEGORY = "MediaURLLoader"
+    CATEGORY = "MediaUtilities"
 
-    def save_video(self, frames, fps, filename_prefix, format, codec, quality, convert_from_gif="True", audio=None, loop_count=0, pingpong="False", prompt=None, extra_pnginfo=None):
+    def media_utilities_save_video(self, frames, fps, filename_prefix, format, codec, quality, convert_from_gif="True", audio=None, loop_count=0, pingpong="False", prompt=None, extra_pnginfo=None):
         try:
             # Handle parameter validation issues
             # Convert convert_from_gif to proper string format
@@ -1438,7 +1438,7 @@ class SaveVideo:
             return {"ui": {"video": []}}
 
 # Register nodes
-class AudioDuration:
+class MediaUtilities_AudioDuration:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -1449,10 +1449,10 @@ class AudioDuration:
 
     RETURN_TYPES = ("FLOAT",)
     RETURN_NAMES = ("duration",)
-    FUNCTION = "get_duration"
-    CATEGORY = "MediaURLLoader"
+    FUNCTION = "media_utilities_get_duration"
+    CATEGORY = "MediaUtilities"
 
-    def get_duration(self, audio):
+    def media_utilities_get_duration(self, audio):
         try:
             # Get the waveform and sample rate from the audio input
             waveform = audio["waveform"][0]  # Get the first waveform in the batch
@@ -1471,22 +1471,22 @@ class AudioDuration:
             return (0.0,)
 
 NODE_CLASS_MAPPINGS = {
-    "AudioURLLoader": AudioURLLoader,
-    "AudioPreview": AudioPreview,
-    "VideoURLLoader": VideoURLLoader,
-    "VideoPreview": VideoPreview,
-    "SaveAudio": SaveAudio,
-    "SaveVideo": SaveVideo,
-    "AudioDuration": AudioDuration,
+    "MediaUtilities_AudioURLLoader": MediaUtilities_AudioURLLoader,
+    "MediaUtilities_AudioPreview": MediaUtilities_AudioPreview,
+    "MediaUtilities_VideoURLLoader": MediaUtilities_VideoURLLoader,
+    "MediaUtilities_VideoPreview": MediaUtilities_VideoPreview,
+    "MediaUtilities_SaveAudio": MediaUtilities_SaveAudio,
+    "MediaUtilities_SaveVideo": MediaUtilities_SaveVideo,
+    "MediaUtilities_AudioDuration": MediaUtilities_AudioDuration,
 }
 
 # Node display names
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AudioURLLoader": "Load Audio From URL",
-    "AudioPreview": "Preview Audio",
-    "VideoURLLoader": "Load Video From URL",
-    "VideoPreview": "Preview Video",
-    "SaveAudio": "Save Audio",
-    "SaveVideo": "Save Video",
-    "AudioDuration": "Get Audio Duration",
+    "MediaUtilities_AudioURLLoader": "Load Audio From URL",
+    "MediaUtilities_AudioPreview": "Preview Audio",
+    "MediaUtilities_VideoURLLoader": "Load Video From URL",
+    "MediaUtilities_VideoPreview": "Preview Video",
+    "MediaUtilities_SaveAudio": "Save Audio",
+    "MediaUtilities_SaveVideo": "Save Video",
+    "MediaUtilities_AudioDuration": "Get Audio Duration",
 }
