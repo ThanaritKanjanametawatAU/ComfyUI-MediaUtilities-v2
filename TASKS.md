@@ -1,4 +1,4 @@
-# ComfyUI-MediaURLLoader Custom Nodes
+# ComfyUI-MediaUtilities-v2 Custom Nodes
 
 ## Project Overview
 Create a ComfyUI extension that provides nodes for loading and previewing media from URLs:

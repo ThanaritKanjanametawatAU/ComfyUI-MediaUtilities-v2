@@ -12,7 +12,7 @@ def create_vorbis_comment_block(comment_dict, last_block=True):
     Returns:
         bytes: The formatted vorbis comment block
     """
-    vendor_string = b'ComfyUI-MediaURLLoader'
+    vendor_string = b'ComfyUI-MediaUtilities-v2'
     vendor_length = len(vendor_string)
     
     comments = []

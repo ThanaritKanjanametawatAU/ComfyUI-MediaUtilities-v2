@@ -1,4 +1,4 @@
-# ComfyUI-MediaUtilities
+# ComfyUI-MediaUtilities-v2
 
 Custom nodes for loading and previewing media from URLs in ComfyUI.
 
@@ -18,12 +18,12 @@ Custom nodes for loading and previewing media from URLs in ComfyUI.
 1. Clone this repository into your ComfyUI custom_nodes directory:
 ```
 cd ComfyUI/custom_nodes
-git clone https://github.com/your-username/ComfyUI-MediaUtilities.git
+git clone https://github.com/your-username/ComfyUI-MediaUtilities-v2.git
 ```
 
 2. Install the required dependencies:
 ```
-cd ComfyUI-MediaUtilities
+cd ComfyUI-MediaUtilities-v2
 pip install -r requirements.txt
 ```
 
